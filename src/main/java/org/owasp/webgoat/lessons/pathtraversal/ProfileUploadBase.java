@@ -31,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Getter
 public class ProfileUploadBase implements AssignmentEndpoint {
 
+  private static final String PATH_TRAVERSAL_DIR = "PathTraversal";
+
   private final String webGoatHomeDirectory;
 
   public ProfileUploadBase(String webGoatHomeDirectory) {
@@ -48,7 +50,14 @@ public class ProfileUploadBase implements AssignmentEndpoint {
     File uploadDirectory = cleanupAndCreateDirectoryForUser(username);
 
     try {
+      // The lesson's exploit is escaping the per-user folder into the shared
+      // "PathTraversal" sandbox folder (rewarded below by solvedIt()); this guard
+      // only blocks escapes beyond that sandbox, e.g. into unrelated system paths.
+      var sandboxRoot = new File(this.webGoatHomeDirectory, PATH_TRAVERSAL_DIR).toPath().normalize();
       var uploadedFile = new File(uploadDirectory, fullName);
+      if (!uploadedFile.toPath().normalize().startsWith(sandboxRoot)) {
+        throw new IOException("Entry is outside of the target directory");
+      }
       uploadedFile.createNewFile();
       FileCopyUtils.copy(file.getBytes(), uploadedFile);
 
@@ -67,7 +76,11 @@ public class ProfileUploadBase implements AssignmentEndpoint {
 
   @SneakyThrows
   protected File cleanupAndCreateDirectoryForUser(String username) {
+    var sandboxRoot = new File(this.webGoatHomeDirectory, PATH_TRAVERSAL_DIR).toPath().normalize();
     var uploadDirectory = new File(this.webGoatHomeDirectory, "/PathTraversal/" + username);
+    if (!uploadDirectory.toPath().normalize().startsWith(sandboxRoot)) {
+      throw new IOException("Entry is outside of the target directory");
+    }
     if (uploadDirectory.exists()) {
       FileSystemUtils.deleteRecursively(uploadDirectory);
     }
@@ -83,7 +96,7 @@ public class ProfileUploadBase implements AssignmentEndpoint {
   }
 
   private AttackResult solvedIt(File uploadedFile) throws IOException {
-    if (uploadedFile.getCanonicalFile().getParentFile().getName().endsWith("PathTraversal")) {
+    if (uploadedFile.getCanonicalFile().getParentFile().getName().endsWith(PATH_TRAVERSAL_DIR)) {
       return success(this).build();
     }
     return failed(this)
@@ -100,7 +113,11 @@ public class ProfileUploadBase implements AssignmentEndpoint {
   }
 
   protected byte[] getProfilePictureAsBase64(String username) {
+    var sandboxRoot = new File(this.webGoatHomeDirectory, PATH_TRAVERSAL_DIR).toPath().normalize();
     var profilePictureDirectory = new File(this.webGoatHomeDirectory, "/PathTraversal/" + username);
+    if (!profilePictureDirectory.toPath().normalize().startsWith(sandboxRoot)) {
+      return defaultImage();
+    }
     var profileDirectoryFiles = profilePictureDirectory.listFiles();
 
     if (profileDirectoryFiles != null && profileDirectoryFiles.length > 0) {
