@@ -16,6 +16,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomUtils;
@@ -49,10 +50,12 @@ import org.springframework.web.bind.annotation.RestController;
 @Slf4j
 public class ProfileUploadRetrieval implements AssignmentEndpoint {
   private final File catPicturesDirectory;
+  private final Path baseDirectory;
 
   public ProfileUploadRetrieval(@Value("${webgoat.server.directory}") String webGoatHomeDirectory) {
     this.catPicturesDirectory = new File(webGoatHomeDirectory, "/PathTraversal/" + "/cats");
     this.catPicturesDirectory.mkdirs();
+    this.baseDirectory = new File(webGoatHomeDirectory).toPath().normalize();
   }
 
   @PostConstruct
@@ -99,6 +102,11 @@ public class ProfileUploadRetrieval implements AssignmentEndpoint {
       var id = request.getParameter("id");
       var catPicture =
           new File(catPicturesDirectory, (id == null ? RandomUtils.nextInt(1, 11) : id) + ".jpg");
+      var normalizedCatPicturePath = catPicture.toPath().normalize();
+      if (!normalizedCatPicturePath.startsWith(baseDirectory)) {
+        throw new IOException("Entry is outside of the target directory");
+      }
+      catPicture = normalizedCatPicturePath.toFile();
 
       if (catPicture.getName().toLowerCase().contains("path-traversal-secret.jpg")) {
         return ResponseEntity.ok()
