@@ -106,6 +106,12 @@ public class ProfileUploadRetrieval implements AssignmentEndpoint {
             .body(FileCopyUtils.copyToByteArray(catPicture));
       }
       if (catPicture.exists()) {
+        var normalizedCatPicture = catPicture.toPath().normalize();
+        var normalizedCatPicturesDirectory = catPicturesDirectory.toPath().normalize();
+        if (!normalizedCatPicture.startsWith(normalizedCatPicturesDirectory)) {
+          return ResponseEntity.badRequest()
+              .body("Illegal characters are not allowed in the query params");
+        }
         return ResponseEntity.ok()
             .contentType(MediaType.parseMediaType(MediaType.IMAGE_JPEG_VALUE))
             .location(new URI("/PathTraversal/random-picture?id=" + catPicture.getName()))
