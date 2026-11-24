@@ -64,17 +64,17 @@ public class CommentsCache {
    * exception which might happen during when users post message (we want to give feedback track
    * progress etc). In real life the XmlMapper bean defined above will be used automatically and the
    * Comment class can be directly used in the controller method (instead of a String)
+   *
+   * @param securityEnabled retained for API compatibility with callers of this lesson method;
+   *     XML parsing is now always hardened against XXE regardless of this flag.
    */
   protected Comment parseXml(String xml, boolean securityEnabled)
       throws XMLStreamException, JAXBException {
     var jc = JAXBContext.newInstance(Comment.class);
     var xif = XMLInputFactory.newInstance();
 
-    // TODO fix me disabled for now.
-    if (securityEnabled) {
-      xif.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, ""); // Compliant
-      xif.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, ""); // compliant
-    }
+    xif.setProperty(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+    xif.setProperty(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
 
     var xsr = xif.createXMLStreamReader(new StringReader(xml));
 

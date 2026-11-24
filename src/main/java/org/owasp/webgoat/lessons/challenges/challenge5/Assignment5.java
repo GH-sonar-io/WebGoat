@@ -39,15 +39,15 @@ public class Assignment5 implements AssignmentEndpoint {
     if (!"Larry".equals(username_login)) {
       return failed(this).feedback("user.not.larry").feedbackArgs(username_login).build();
     }
-    try (var connection = dataSource.getConnection()) {
-      PreparedStatement statement =
-          connection.prepareStatement(
-              "select password from challenge_users where userid = '"
-                  + username_login
-                  + "' and password = '"
-                  + password_login
-                  + "'");
-      ResultSet resultSet = statement.executeQuery();
+    try (var connection = dataSource.getConnection();
+        PreparedStatement statement =
+            connection.prepareStatement(
+                "select password from challenge_users where userid = '"
+                    + username_login
+                    + "' and password = '"
+                    + password_login
+                    + "'");
+        ResultSet resultSet = statement.executeQuery()) {
 
       if (resultSet.next()) {
         return success(this).feedback("challenge.solved").feedbackArgs(flags.getFlag(5)).build();
